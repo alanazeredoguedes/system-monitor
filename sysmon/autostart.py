@@ -22,6 +22,23 @@ def _quote(parts):
     return " ".join(f'"{p}"' if " " in p else p for p in parts)
 
 
+def is_enabled():
+    if sys.platform == "win32":
+        import winreg
+        try:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run") as k:
+                winreg.QueryValueEx(k, NAME)
+            return True
+        except OSError:
+            return False
+    return os.path.exists(os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"),
+                                       "autostart", "sysmon.desktop"))
+
+
+def set_enabled(on):
+    (enable if on else disable)()
+
+
 def enable():
     cmd = _quote(_command())
     if sys.platform == "win32":

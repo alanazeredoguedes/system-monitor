@@ -49,6 +49,7 @@ class Controller(QObject):
         self.collector.sample()
         self.win = MonitorWindow(self.collector)
         self.win.setWindowIcon(app.windowIcon())
+        self.win.quit_requested.connect(app.quit)
 
         self.timer = QTimer(self, interval=1000)
         self.timer.timeout.connect(self._tick)
@@ -56,7 +57,7 @@ class Controller(QObject):
         server.newConnection.connect(self._on_connection)
 
         self.tray = None
-        if IS_WIN or os.environ.get("SYSMON_TRAY"):
+        if not os.environ.get("SYSMON_NO_TRAY"):
             self._setup_tray()
         self.hotkey = None
 
@@ -71,6 +72,10 @@ class Controller(QObject):
             act = QAction(label, menu)
             act.triggered.connect(slot)
             menu.addAction(act)
+        auto = QAction("Iniciar com o sistema", menu, checkable=True)
+        auto.toggled.connect(lambda on: self.win.set_autostart(on) if on != self.win.autostart_on else None)
+        menu.aboutToShow.connect(lambda: auto.setChecked(self.win._autostart_state()))
+        menu.addAction(auto)
         menu.addSeparator()
         quit_act = QAction("Sair", menu)
         quit_act.triggered.connect(self.app.quit)

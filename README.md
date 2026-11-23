@@ -6,6 +6,8 @@ Card flutuante, sempre no topo, com CPU, GPU (NVIDIA), memória, rede e disco. U
 - Modo curto (CPU, GPU, memória, rede, disco) e modo avançado (temperaturas, núcleos, top processos…).
 - Nunca rouba o foco, aparece em todas as áreas de trabalho, arrasta com o mouse.
 - Mostra/esconde por atalho global.
+- No modo avançado: caixinha **Iniciar com o sistema** (liga/desliga o autostart) e botão **Sair**.
+- Ícone na bandeja (Windows e Ubuntu) com o mesmo menu. `SYSMON_NO_TRAY=1` desativa.
 
 ## Rodar em modo dev
 
@@ -43,7 +45,7 @@ dist\sysmon.exe --autostart on                      # abre junto com o Windows
 
 - Atalho global padrão: **Ctrl+Alt+M**. Para mudar: `--hotkey ctrl+shift+m` ou a chave `"hotkey"` em
   `%APPDATA%\sysmon\config.json`.
-- Ícone na bandeja do sistema (clique alterna; botão direito: avançado / sair).
+- Clique no ícone da bandeja alterna o card; botão direito: avançado, iniciar com o Windows, sair.
 - Limitações atuais: sem temperatura de CPU/disco (o Windows não expõe isso sem driver de terceiros),
   e a leitura/escrita de disco é o total da máquina (o psutil não separa por partição no Windows).
   GPU: só NVIDIA (via `nvml.dll`, que vem com o driver).

@@ -7,12 +7,12 @@ import os
 import sys
 from functools import lru_cache
 
-from PySide6.QtCore import QPointF, QRectF, Qt, QTimer
+from PySide6.QtCore import QPointF, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import (QColor, QCursor, QFont, QFontMetricsF, QGuiApplication, QImage, QLinearGradient,
                            QPainter, QPainterPath, QPen)
 from PySide6.QtWidgets import QWidget
 
-from . import paths
+from . import autostart, paths
 
 # ------------------------------------------------------------------ visual
 FONT_FAMILIES = ["Ubuntu Sans", "Segoe UI Variable Text", "Segoe UI", "Inter", "Noto Sans", "DejaVu Sans"]
@@ -222,6 +222,8 @@ def _x11_tweak_window(win_id):
 
 # ------------------------------------------------------------------ janela
 class MonitorWindow(QWidget):
+    quit_requested = Signal()
+
     # Tile: linha 1 = rótulo (esq.) + detalhe (dir.); linha 2 = valor (esq.) + gráfico (dir.)
     # O modo curto é enxuto; no avançado há espaço, então tudo fica maior e mais legível.
     TILE_STYLE = {
@@ -244,6 +246,7 @@ class MonitorWindow(QWidget):
         self.hover = None
         self._compact_pos = self._expanded_pos = None
         self._size_cache = {}
+        self.autostart_on = self._autostart_state()
 
         self.setWindowTitle("Monitor do Sistema")
         # Sem borda, sempre no topo, fora da barra de tarefas e sem roubar o foco
@@ -282,6 +285,22 @@ class MonitorWindow(QWidget):
 
     def _on_some_monitor(self, x, y):
         return any(s.geometry().contains(int(x) + 40, int(y) + 40) for s in QGuiApplication.screens())
+
+    # ----------------------------------------------------------- início automático
+    @staticmethod
+    def _autostart_state():
+        try:
+            return autostart.is_enabled()
+        except OSError:
+            return False
+
+    def set_autostart(self, on):
+        try:
+            autostart.set_enabled(on)
+        except OSError:
+            pass
+        self.autostart_on = self._autostart_state()
+        self.update()
 
     # ----------------------------------------------------------- config
     def _load_cfg(self):
@@ -407,6 +426,10 @@ class MonitorWindow(QWidget):
             self.hide()
         elif action == "advanced":
             self.toggle_advanced()
+        elif action == "autostart":
+            self.set_autostart(not self.autostart_on)
+        elif action == "quit":
+            self.quit_requested.emit()
         else:
             handle = self.windowHandle()
             if handle:
@@ -470,6 +493,8 @@ class MonitorWindow(QWidget):
             y = self._procs(p, x0, max(left, right) + GAP, card_w - PAD * 2)
         else:
             y = left
+        if self.advanced:
+            y = self._actions(p, x0, y + GAP, card_w - PAD * 2)
         y = self._footer(p, x0, y + GAP, card_w - PAD * 2)
         return win_w, int(math.ceil(y + PAD + SHADOW))
 
@@ -683,6 +708,32 @@ class MonitorWindow(QWidget):
         self._kv(p, x, cy, w, "Rede desde o boot",
                  f"↓ {fmt_bytes(cur['rx_total'])}  ↑ {fmt_bytes(cur['tx_total'])}")
         return y + ph
+
+    def _actions(self, p, x, y, w):
+        """Só no modo avançado: caixinha "Iniciar com o sistema" e botão "Sair"."""
+        h, qw, gap = 26, 70, 6
+        aw = w - qw - gap
+        for bx, bw, action in ((x, aw, "autostart"), (x + aw + gap, qw, "quit")):
+            panel(p, bx, y, bw, h, 8, (1, 1, 1, 0.07 if self.hover == action else 0.035))
+            self.hits.append((bx, y, bw, h, action))
+        # caixinha
+        bx, by = x + 10, y + 7
+        if self.autostart_on:
+            fill_rr(p, bx, by, 12, 12, 3, C_GPU)
+            pen = QPen(qc(BG), 1.8)
+            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+            pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+            p.setPen(pen)
+            p.drawPolyline([QPointF(bx + 3, by + 6.3), QPointF(bx + 5.3, by + 8.6), QPointF(bx + 9, by + 3.8)])
+        else:
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.setPen(QPen(qc(MUTED, 0.9), 1.3))
+            p.drawPath(rpath(bx + 0.5, by + 0.5, 11, 11, 3))
+        text(p, "Iniciar com o sistema", x + 30, y + 5.5, 11.5,
+             TEXT if self.hover == "autostart" else MUTED, 500)
+        text(p, "Sair", x + aw + gap, y + 5.5, 11.5, HOT if self.hover == "quit" else MUTED, 500,
+             align="c", width=qw)
+        return y + h
 
     def _footer(self, p, x, y, w):
         hov = self.hover == "advanced"
