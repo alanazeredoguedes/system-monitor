@@ -9,6 +9,7 @@ from PySide6.QtNetwork import QHostAddress, QTcpServer
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
 from . import ipc
+from .log import log
 from .metrics import Collector
 from .ui import MonitorWindow
 
@@ -90,17 +91,20 @@ class Controller(QObject):
     def setup_hotkey(self, spec):
         if not IS_WIN:
             return
-        from .winhotkey import HotkeyFilter
+        from .winhotkey import HotkeyThread
         try:
-            self.hotkey = HotkeyFilter(spec, self.win.toggle)
+            self.hotkey = HotkeyThread(spec, self)
         except ValueError as e:
-            print(f"Atalho inválido ({e}).", file=sys.stderr)
+            self._hotkey_problem(f"Atalho inválido ({e}).")
             return
-        if self.hotkey.ok:
-            self.app.installNativeEventFilter(self.hotkey)
-        else:
-            print(f"Não foi possível registrar o atalho {spec} (já está em uso por outro programa).",
-                  file=sys.stderr)
+        self.hotkey.triggered.connect(self.win.toggle)
+        self.hotkey.failed.connect(self._hotkey_problem)
+        self.hotkey.start()
+
+    def _hotkey_problem(self, text):
+        log(text)
+        if self.tray:
+            self.tray.showMessage("Monitor do Sistema", text, QSystemTrayIcon.MessageIcon.Warning, 8000)
 
     # ----------------------------------------------------------- comandos
     def handle(self, cmd):
@@ -135,7 +139,7 @@ class Controller(QObject):
 
     def shutdown(self):
         if self.hotkey:
-            self.hotkey.unregister()
+            self.hotkey.stop()
         self.win._save_cfg()
 
 
@@ -153,7 +157,7 @@ def run(start_hidden=False, first_cmd=None, hotkey=None):
 
     ctl = Controller(app, server)
     if IS_WIN:
-        ctl.setup_hotkey(hotkey or ctl.win.cfg.get("hotkey", "ctrl+alt+m"))
+        ctl.setup_hotkey(hotkey or ctl.win.cfg.get("hotkey", "ctrl+pageup"))
     if not start_hidden:
         ctl.win.reveal()
     if first_cmd == "advanced":

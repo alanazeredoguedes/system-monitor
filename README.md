@@ -43,8 +43,12 @@ python -m venv .venv; .venv\Scripts\pip install -r requirements-dev.txt
 dist\sysmon.exe --autostart on                      # abre junto com o Windows
 ```
 
-- Atalho global padrão: **Ctrl+Alt+M**. Para mudar: `--hotkey ctrl+shift+m` ou a chave `"hotkey"` em
-  `%APPDATA%\sysmon\config.json`.
+- Atalho global padrão: **Ctrl+Page Up** (igual ao do Linux). Enquanto o app estiver aberto ele tem
+  prioridade sobre o "trocar de aba" do navegador e do VS Code. Para mudar: `--hotkey ctrl+alt+m` ou a
+  chave `"hotkey"` em `%APPDATA%\sysmon\config.json`. Se outro programa já usa o atalho, o app avisa
+  na bandeja.
+- Diagnóstico: o log fica em `%APPDATA%\sysmon\sysmon.log` (mostra se o atalho foi registrado e cada vez
+  que foi acionado).
 - Clique no ícone da bandeja alterna o card; botão direito: avançado, iniciar com o Windows, sair.
 - Limitações atuais: sem temperatura de CPU/disco (o Windows não expõe isso sem driver de terceiros),
   e a leitura/escrita de disco é o total da máquina (o psutil não separa por partição no Windows).

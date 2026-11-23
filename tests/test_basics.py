@@ -51,3 +51,56 @@ def test_render_both_modes():
         w.render(img)
         assert not img.isNull()
     assert app is not None
+
+
+class _FakeUser32:
+    """Simula o user32 do Windows: entrega um WM_HOTKEY e depois encerra o laço."""
+
+    def __init__(self, register_ok=True):
+        self.register_ok, self.calls, self.unregistered = register_ok, 0, False
+
+    def RegisterHotKey(self, *a):  # noqa: N802
+        self.args = a
+        return 1 if self.register_ok else 0
+
+    def GetMessageW(self, ref, *a):  # noqa: N802
+        self.calls += 1
+        if self.calls == 1:
+            from sysmon.winhotkey import HOTKEY_ID, WM_HOTKEY
+            ref._obj.message, ref._obj.wParam = WM_HOTKEY, HOTKEY_ID
+            return 1
+        return 0
+
+    def UnregisterHotKey(self, *a):  # noqa: N802
+        self.unregistered = True
+
+
+def _run_thread(fake, spec="ctrl+pageup"):
+    from PySide6.QtWidgets import QApplication
+    from sysmon.winhotkey import HotkeyThread
+
+    class T(HotkeyThread):
+        def _api(self):
+            return fake, lambda: 1
+
+    app = QApplication.instance() or QApplication([])
+    t, got = T(spec), {"hits": 0, "errors": []}
+    t.triggered.connect(lambda: got.__setitem__("hits", got["hits"] + 1))
+    t.failed.connect(got["errors"].append)
+    t.start()
+    t.wait(3000)
+    app.processEvents()
+    return t, got
+
+
+def test_hotkey_thread_triggers():
+    fake = _FakeUser32()
+    t, got = _run_thread(fake)
+    assert got["hits"] == 1 and not got["errors"]
+    assert fake.args[2] & 0x4000 and fake.args[3] == 0x21  # NOREPEAT + VK_PRIOR
+    assert fake.unregistered
+
+
+def test_hotkey_thread_reports_refusal():
+    t, got = _run_thread(_FakeUser32(register_ok=False))
+    assert got["hits"] == 0 and len(got["errors"]) == 1

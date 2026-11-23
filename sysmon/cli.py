@@ -17,7 +17,7 @@ def _parse(argv):
     g.add_argument("--quit", action="store_true", help="encerra o monitor")
     g.add_argument("--autostart", choices=("on", "off"), help="liga/desliga o início automático no login")
     ap.add_argument("--hidden", action="store_true", help="inicia escondido")
-    ap.add_argument("--hotkey", metavar="ATALHO", help="Windows: atalho global, ex.: ctrl+alt+m")
+    ap.add_argument("--hotkey", metavar="ATALHO", help="Windows: atalho global, ex.: ctrl+pageup (padrão)")
     return ap.parse_args(argv)
 
 
