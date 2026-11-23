@@ -1,0 +1,7 @@
+#!/bin/sh
+# Alterna o card. Se o monitor já estiver rodando, usa D-Bus (instantâneo);
+# senão, inicia o app (que já abre visível).
+DIR="$(dirname "$(readlink -f "$0")")"
+gdbus call --session --dest io.github.vapo.sysmon --object-path /io/github/vapo/sysmon \
+  --method org.gtk.Actions.Activate toggle '[]' '{}' >/dev/null 2>&1 \
+  || exec python3 "$DIR/sysmon.py"

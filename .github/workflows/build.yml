@@ -1,0 +1,56 @@
+name: build
+
+on:
+  push:
+    branches: [main]   # a cada commit: roda testes e compila (só para conferir)
+    tags: ["v*"]       # a cada tag vX.Y.Z: compila e publica a Release com os executáveis
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write      # necessário para anexar arquivos à Release
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            artifact: sysmon-linux-x86_64.tar.gz
+            path: dist/sysmon-linux-x86_64.tar.gz
+          - os: windows-latest
+            artifact: sysmon-windows.exe
+            path: dist/sysmon.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Dependências do Qt (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libxcb-cursor0 libxkbcommon-x11-0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libegl1
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Testes
+        run: python -m pytest -q
+        env:
+          QT_QPA_PLATFORM: offscreen
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
+        run: ./build.sh
+        env:
+          PYTHON: python
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        run: python -m PyInstaller --noconfirm --clean sysmon.spec
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.path }}
+      - name: Anexar à Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.path }}
+          generate_release_notes: true
