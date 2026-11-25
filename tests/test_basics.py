@@ -104,3 +104,11 @@ def test_hotkey_thread_triggers():
 def test_hotkey_thread_reports_refusal():
     t, got = _run_thread(_FakeUser32(register_ok=False))
     assert got["hits"] == 0 and len(got["errors"]) == 1
+
+
+def test_autostart_command_uses_appimage_path(monkeypatch):
+    from sysmon import autostart
+    monkeypatch.setenv("APPIMAGE", "/home/x/Apps/sysmon-x86_64.AppImage")
+    assert autostart._command() == ["/home/x/Apps/sysmon-x86_64.AppImage"]
+    monkeypatch.delenv("APPIMAGE")
+    assert autostart._command()[-1].endswith("sysmon.py")

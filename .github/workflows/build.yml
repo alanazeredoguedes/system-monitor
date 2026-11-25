@@ -17,10 +17,12 @@ jobs:
       matrix:
         include:
           - os: ubuntu-22.04
-            artifact: sysmon-linux-x86_64.tar.gz
-            path: dist/sysmon-linux-x86_64.tar.gz
+            artifact: sysmon-linux
+            path: |
+              dist/sysmon-linux-x86_64.tar.gz
+              dist/sysmon-x86_64.AppImage
           - os: windows-latest
-            artifact: sysmon-windows.exe
+            artifact: sysmon-windows
             path: dist/sysmon.exe
     runs-on: ${{ matrix.os }}
     steps:
@@ -38,7 +40,9 @@ jobs:
           QT_QPA_PLATFORM: offscreen
       - name: Build (Linux)
         if: runner.os == 'Linux'
-        run: ./build.sh
+        run: |
+          ./build.sh
+          ./build-appimage.sh
         env:
           PYTHON: python
       - name: Build (Windows)

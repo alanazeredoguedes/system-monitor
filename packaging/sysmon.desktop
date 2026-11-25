@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Monitor do Sistema
+Comment=CPU, GPU, memória e rede em um card flutuante
+Exec=sysmon
+Icon=sysmon
+Categories=System;Monitor;
+Terminal=false

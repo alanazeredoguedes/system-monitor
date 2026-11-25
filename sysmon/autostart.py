@@ -8,6 +8,9 @@ NAME = "SystemMonitor"
 
 def _command():
     """Comando que inicia o monitor (executável empacotado ou `python sysmon.py`)."""
+    if os.environ.get("APPIMAGE"):
+        # Dentro de um AppImage, sys.executable aponta para uma pasta temporária que some ao fechar
+        return [os.environ["APPIMAGE"]]
     if getattr(sys, "frozen", False):
         return [sys.executable]
     script = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "sysmon.py"))
